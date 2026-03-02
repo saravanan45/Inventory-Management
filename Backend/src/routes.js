@@ -1,23 +1,26 @@
-const express = require('express')
-const pool = require('./db.js')
-const router = express.Router()
+const express = require("express");
+const pool = require("./db.js");
+const ProductsController = require("./Controller/ProductsController");
+const OrdersController = require("./Controller/OrdersController");
 
-router.get('/', (req, res) => {
-    res.send('Hello World!')
-})
+const router = express.Router();
 
-// Products Routes
-router.get('/products', ProductsController.getProducts)
-router.post('/product', ProductsController.createProduct)
-router.put('/product', ProductsController.updateProduct)
-router.delete('/product', ProductsController.deleteProduct)
+router.get("/", (req, res) => {
+  res.send("Hello World!");
+});
 
+// Product routes
+router.get("/products", ProductsController.getProducts);
+router.get("/product/:sku", ProductsController.getProductBySKU);
+router.post("/product", ProductsController.createProduct);
+router.put("/product", ProductsController.updateProduct);
+router.delete("/product/:sku", ProductsController.deleteProduct);
 
-// Order Routes
-router.get('/orders', OrdersController.getOrders)
-router.post('/order', OrdersController.createOrder)
-router.put('/updateOrder', OrdersController.updateOrder)
-router.delete('/order', OrdersController.deleteOrder)
+// Order routes
+router.get("/orders", OrdersController.getOrders);
+router.get("/order/:id", OrdersController.getOrderById);
+router.post("/order", OrdersController.createOrder);
+router.put("/order", OrdersController.updateOrder);
+router.delete("/order/:id", OrdersController.deleteOrder);
 
-
-module.exports = router
+module.exports = router;
