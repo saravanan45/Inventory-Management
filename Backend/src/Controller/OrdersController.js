@@ -30,11 +30,12 @@ const createOrder = async (req, res) => {
     if (!items) return res.status(400).json({ error: "Items are required" });
     if (!user_id) return res.status(400).json({ error: "User ID is required" });
     try {
+
         const order = await OrdersService.createOrder(req.body);
         return res.status(201).json(response.success(order));
     } catch (err) {
         console.error(err);
-        return res.status(500).json(response.error("Internal Server Error"));
+        return res.status(500).json(response.error(err.message || "Internal Server Error"));
     }
 };
 

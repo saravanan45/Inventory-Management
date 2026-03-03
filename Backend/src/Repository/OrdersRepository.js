@@ -30,9 +30,9 @@ const getOrderById = async (id) => {
   }
 };  
 
-const createOrder = async (data) => {
+const createOrder = async (client, data) => {
   try {
-    const order = await pool.query(
+    const order = await client.query(
       "INSERT INTO orders ( user_id, total_amount, currency, status, payment_status) VALUES ($1, $2, $3, $4, $5) RETURNING *",
       [
         data.user_id,
@@ -43,11 +43,21 @@ const createOrder = async (data) => {
       ],
     );
     const orderId = order.rows[0].id;
-    for (const item of data.items) {
-      await pool.query(
-        "INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES ($1, $2, $3, $4)",
-        [orderId, item.product_id, item.quantity, item.price_at_purchase],
-      );
+     if (Array.isArray(data.items) && data.items.length > 0) {
+      // Build a single bulk INSERT for order_items
+      const values = [];
+      const placeholders = data.items.map((item, idx) => {
+        const base = idx * 4;
+        // push parameters for this row: order_id, product_id, quantity, price_at_purchase
+        values.push(orderId, item.product_id, item.quantity, item.price_at_purchase);
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+      });
+
+      const insertItemsQuery = `
+        INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
+        VALUES ${placeholders.join(", ")}
+      `;
+      await client.query(insertItemsQuery, values);
     }
     return order.rows[0];
   } catch (error) {
