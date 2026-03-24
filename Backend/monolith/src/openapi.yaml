@@ -511,15 +511,12 @@ components:
       type: object
       required:
         - id
+        - status
       properties:
         id:
           type: integer
-        product_id:
-          type: integer
-        quantity:
-          type: integer
-        user_id:
-          type: integer
+        status:
+          type: string
 
     OrdersListResponse:
       type: object

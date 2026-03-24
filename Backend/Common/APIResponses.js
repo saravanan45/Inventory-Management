@@ -1,4 +1,5 @@
 const success = (data) => {
+    console.log("API response data:", data);
     return {
         status: "success",
         data,

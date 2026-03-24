@@ -12,10 +12,10 @@ const validateStockAvailability = (inventoryProducts, itemMap) => {
   return allStocksAvailable;
 };
 
-const updateInventoryForProductIds = async (client, items) => {
+const updateInventoryForProductIds = async (client, items, action) => {
   try {
     // update inventory - increment reserved quantity for each product in the order
-    await InventoryRepository.updateInventoryForProductIds(client, items);
+    await InventoryRepository.updateInventoryForProductIds(client, items, action);
   } catch (error) {
     console.error(error);
     throw new Error("Error updating inventory");

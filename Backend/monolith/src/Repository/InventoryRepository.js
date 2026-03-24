@@ -10,19 +10,25 @@ const getInventoryByProductIds = async (client,productIds) => {
     }
 };
 
-const updateInventoryForProductIds = (client, items) => {
-    const flatValues = items.flatMap(item => [item.product_id, item.quantity]);
-    const valuePlaceholders = items.map((_, index) => `($${index * 2 + 1}::bigint, $${index * 2 + 2}::integer)`).join(', ');
+const updateInventoryForProductIds = (client, items, action) => {
+    const updateQuery = action === 'release'
+        ? `
+            UPDATE inventory
+            SET reserved_quantity = reserved_quantity - $1
+            WHERE product_id = $2
+        `
+        : `
+            UPDATE inventory
+            SET reserved_quantity = reserved_quantity + $1
+            WHERE product_id = $2
+        `;
 
-    const query = `
-        UPDATE inventory AS i
-        SET reserved_quantity = i.reserved_quantity + c.quantity
-        FROM (VALUES ${valuePlaceholders}) AS c(product_id, quantity)
-        WHERE i.product_id = c.product_id
-    `;
+    const promises = items.map(item => {
+        return client.query(updateQuery, [item.quantity, item.product_id]);
+    });
 
-    return client.query(query, flatValues);
-}
+    return Promise.all(promises);
+};
 
 module.exports = {
     getInventoryByProductIds,

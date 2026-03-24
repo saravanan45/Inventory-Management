@@ -1,5 +1,5 @@
 const ProductsService = require("../Service/ProductsService");
-const response = require("../Common/APIResponses");
+const response = require("../../../Common/APIResponses");
 
 const getProducts = async (req, res) => {
   const { page = 0, limit = 10 } = req.query || {};

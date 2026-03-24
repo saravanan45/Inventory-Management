@@ -66,12 +66,13 @@ const createOrder = async (client, data) => {
   }
 };
 
-const updateOrder = async (data) => {
+const updateOrderStatus = async (client, id, status) => {
   try {
-    const order = pool.query(
+    const order = await client.query(
       "UPDATE orders SET status = $1 WHERE id = $2 RETURNING *",
-      [data.status, data.id],
+      [status, id],
     );
+    console.log("Updated order status:", order.rows);
     return order.rows[0];
   } catch (error) {
     console.error(error);
@@ -94,7 +95,7 @@ const deleteOrder = async (data) => {
 module.exports = {
   getOrders,
   createOrder,
-  updateOrder,
+  updateOrderStatus,
   deleteOrder,
   getOrderById
 };

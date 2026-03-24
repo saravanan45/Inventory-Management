@@ -217,3 +217,22 @@ user saravanan
 password admin 
 database postgres
 port 5432
+
+
+// DB orders insert query
+
+{
+  "user_id": 101,
+  "total_amount": 200,
+  "status": "PENDING",
+  "payment_status": "PAID",
+  "currency": "INR",
+  "items": [
+    {
+      "product_id": "13",
+      "quantity": "2",
+      "price_at_purchase": "50"
+    }
+  ]
+}
+

@@ -1,5 +1,5 @@
 const OrdersService = require('../Service/OrdersService');
-const response = require('../Common/APIResponses');
+const response = require('../../../Common/APIResponses');
 
 const getOrders = async (req, res) => {
     const {page = 0, limit = 10} = req.query || {};
@@ -39,12 +39,12 @@ const createOrder = async (req, res) => {
     }
 };
 
-const updateOrder = async (req, res) => {
-    const { id } = req.body;
+const updateOrderStatus = async (req, res) => {
+    const { id, status } = req.body;
     if (!id) return res.status(400).json({ error: "Order ID is required" });
     try {
-        const order = await OrdersService.updateOrder(req.body);
-        return res.status(201).json(response.success(order));
+        const order = await OrdersService.updateOrderStatus({ id, status });
+        return res.status(200).json(response.success(order));
     } catch (err) {
         console.error(err);
         return res.status(500).json(response.error("Internal Server Error"));
@@ -66,7 +66,7 @@ const deleteOrder = async (req, res) => {
 module.exports = {
     getOrders,
     createOrder,
-    updateOrder,
+    updateOrderStatus,
     deleteOrder,
     getOrderById
 };

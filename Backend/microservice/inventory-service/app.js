@@ -1,23 +1,23 @@
-const express = require("express");
-const cors = require("cors");
+const express = require('express');
+const bodyParser = require('body-parser');
+const LeakyBucket = require('./LeakyBucket');
+const cors = require('cors');
 const swaggerUi = require("swagger-ui-express");
 const swaggerJSDoc = require("swagger-jsdoc");
 const YAML = require("yamljs");
-const LeakyBucket = require("../../Common/LeakyBucket");
-
-const routes = require("./routes");
+const routes = require('./routes');
 
 const app = express();
-app.use(cors());
-
 const leakyBucket = new LeakyBucket(100, 10); // 100 requests per second
+app.use(bodyParser.json());
+app.use(cors());
 app.use(express.json());
 
-const swaggerDocument = YAML.load("./src/openapi.yaml");
+const swaggerDocument = YAML.load("./openapi.yaml");
 
 const swaggerOptions = {
   swaggerDefinition: swaggerDocument,
-  apis: ["./src/routes.js"],
+  apis: ["./routes.js"],
 };
 
 const swaggerDocs = swaggerJSDoc(swaggerOptions);
@@ -32,13 +32,14 @@ app.use(
 );
 
 app.use((req, res, next) => {
-  if (leakyBucket.addRequest(req)) {
-    next();
-  } else {
-    res.status(429).json({ error: "Too Many Requests" });
-  }
+    if (leakyBucket.allowRequest()) {
+        next();
+    } else {
+        res.status(429).json({ error: "Too Many Requests" });
+    }
 });
 
 app.use(routes);
 
 module.exports = app;
+
