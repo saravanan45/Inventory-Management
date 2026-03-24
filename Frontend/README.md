@@ -71,3 +71,16 @@ export default defineConfig([
   },
 ])
 ```
+
+
+Application structure
+
+Frontend -> User Application -> list of products -> react-query -> fetch
+
+place order -> item -> react-query
+
+Backend -> place-order -> Order service -> Inventory Service for item quantity check 
+
+swagger URL: http://localhost:3010/api-docs/
+
+Backend URL: http://localhost:3010/
