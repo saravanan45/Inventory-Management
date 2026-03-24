@@ -1,5 +1,5 @@
 const OrdersRepository = require('../Repository/OrdersRepository');
-const InventoryRepository = require('../Repository/InventoryRepository');
+const { validateStockAvailability, updateInventoryForProductIds, getInventoryByProductIds } = require('./InventoryService');
 const pool = require('../db');
 
 const getOrders = async (page, limit) => {
@@ -27,11 +27,12 @@ const createOrder = async (data) => {
     try {
         await client.query('BEGIN');
         const { items } = data;
-
+        // extract product IDs from order items
         const productIds = items.map(item => item.product_id);
+        // create a map of order items for quick lookup
         const itemMap = new Map(items.map(i => [i.product_id, i]));
         // inventory check - fetch inventory for all products in the order and validate availability
-        const inventoryProducts = await InventoryRepository.getInventoryByProductIds(client, productIds);
+        const inventoryProducts = await getInventoryByProductIds(client, productIds);
 
         // validate all products in the order exist in inventory
         if(inventoryProducts.length !== productIds.length) {
@@ -39,18 +40,14 @@ const createOrder = async (data) => {
         }
 
         // validate stock availability for each product in the order
-        for (const item of inventoryProducts) {
-            const available_quantity = item.available_quantity - item.reserved_quantity;
-            const orderedItem = itemMap.get(item.product_id);
-            if (available_quantity < orderedItem.quantity) {
-                throw new Error(`Insufficient stock for product ID ${item.product_id}`);
-            }
+        if(!validateStockAvailability(inventoryProducts, itemMap)) {
+            throw new Error(`Insufficient stock for one or more products in the order`);
         }
 
         // create order
         const order = await OrdersRepository.createOrder(client,data);
-        // update inventory - increment reserved quantity for each product in the order
-        await InventoryRepository.updateInventoryForProductIds(client, items);
+        // update inventory - decrement reserved quantity for each product in the order
+        await updateInventoryForProductIds(client, items);
         // return created order
         await client.query('COMMIT');
         return order;
