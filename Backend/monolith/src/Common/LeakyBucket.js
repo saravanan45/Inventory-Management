@@ -4,7 +4,7 @@ class LeakyBucket {
         this.leakRate = leakRate;
         this.queue = []; 
 
-        setInterval(this.leak, 1000 / this.leakRate);
+        setInterval(() => this.leak(), 1000 / this.leakRate);
     }
 
     addRequest(request) {

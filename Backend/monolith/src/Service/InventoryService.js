@@ -5,7 +5,7 @@ const validateStockAvailability = (inventoryProducts, itemMap) => {
   for (const item of inventoryProducts) {
     const available_quantity = item.available_quantity - item.reserved_quantity;
     const orderedItem = itemMap.get(item.product_id);
-    if (available_quantity < orderedItem.quantity) {
+    if (!orderedItem || available_quantity < orderedItem?.quantity) {
       allStocksAvailable = false;
     }
   }

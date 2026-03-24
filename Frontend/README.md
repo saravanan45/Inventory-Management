@@ -84,3 +84,136 @@ Backend -> place-order -> Order service -> Inventory Service for item quantity c
 swagger URL: http://localhost:3010/api-docs/
 
 Backend URL: http://localhost:3010/
+
+
+Backend DB SQL Queries
+
+CREATE TABLE orders (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    total_amount NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
+    currency VARCHAR(3) NOT NULL DEFAULT 'INR',
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    payment_status VARCHAR(30) NOT NULL DEFAULT 'UNPAID',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+	id BIGSERIAL PRIMARY KEY,
+	order_id BIGINT NOT NULL REFERENCES orders(id) on DELETE CASCADE,
+	products_id BIGINT NOT NULL REFERENCES products(id),
+	quantity INTEGER NOT NULL CHECK (quantity > 0),
+	price_at_purchase NUMERIC(12,2) NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    sku VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    price NUMERIC(12,2) NOT NULL CHECK (price >= 0),
+    currency VARCHAR(3) NOT NULL DEFAULT 'INR',
+    category_id BIGINT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE inventory (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    warehouse_id BIGINT DEFAULT 1,
+    available_quantity INTEGER NOT NULL DEFAULT 0 CHECK (available_quantity >= 0),
+    reserved_quantity INTEGER NOT NULL DEFAULT 0 CHECK (reserved_quantity >= 0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_inventory_product
+        FOREIGN KEY (product_id)
+        REFERENCES products(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT unique_product_warehouse
+        UNIQUE (product_id, warehouse_id)
+);
+
+INSERT INTO products (
+    name,
+    sku,
+    description,
+    price,
+    currency,
+    category_id,
+    is_active
+)
+SELECT
+    'Product ' || gs AS name,
+    'SKU-' || LPAD(gs::text, 4, '0') AS sku,
+    'Description for product ' || gs,
+    ROUND((random() * 10000 + 100)::numeric, 2) AS price,
+    'INR',
+    NULL,
+    TRUE
+FROM generate_series(1, 100) AS gs;
+
+
+INSERT INTO inventory (
+    product_id,
+    warehouse_id,
+    available_quantity,
+    reserved_quantity
+)
+SELECT
+    id,
+    1 AS warehouse_id,
+    FLOOR(random() * 200)::int AS available_quantity,
+    FLOOR(random() * 50)::int AS reserved_quantity
+FROM products
+LIMIT 100;
+
+INSERT INTO orders (
+    user_id,
+    total_amount,
+    currency,
+    status,
+    payment_status,
+    created_at,
+    updated_at
+)
+SELECT
+    FLOOR(random() * 50 + 1)::bigint AS user_id,
+    ROUND((random() * 20000 + 500)::numeric, 2) AS total_amount,
+    'INR',
+    (ARRAY['PENDING','CONFIRMED','SHIPPED','DELIVERED','CANCELLED'])
+        [FLOOR(random()*5 + 1)],
+    (ARRAY['UNPAID','PAID','FAILED','REFUNDED'])
+        [FLOOR(random()*4 + 1)],
+    NOW() - (random() * interval '30 days'),
+    NOW()
+FROM generate_series(1, 100);
+
+
+INSERT INTO order_items (
+    order_id,
+    product_id,
+    quantity,
+    price_at_purchase
+)
+SELECT
+    FLOOR(RANDOM() * 100 + 1)::BIGINT AS order_id,  -- 1 to 100
+    FLOOR(RANDOM() * 50 + 1)::BIGINT AS product_id, -- assuming products 1–50 exist
+    FLOOR(RANDOM() * 5 + 1)::INT AS quantity,       -- 1 to 5 quantity
+    ROUND((RANDOM() * 1000 + 100)::NUMERIC, 2) AS price_at_purchase
+FROM generate_series(1, 500);
+
+ALTER TABLE order_items RENAME COLUMN products_id TO product_id;
+
+// DB Connection
+
+host: 127.0.0.1
+user saravanan
+password admin 
+database postgres
+port 5432
