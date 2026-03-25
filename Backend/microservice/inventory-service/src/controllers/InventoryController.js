@@ -1,5 +1,5 @@
 const InventoryService = require('../services/InventoryService');
-const response = require('../Common/APIResponses');
+const response = require('../../../../Common/APIResponses');
 
 const getInventoryByProductIds = async (req, res) => {
     const { ids } = req.body;

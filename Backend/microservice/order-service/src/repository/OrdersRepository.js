@@ -1,4 +1,4 @@
-const pool = require("../db");
+const pool = require("../../db");
 
 const getOrders = async (page, limit) => {
   try {

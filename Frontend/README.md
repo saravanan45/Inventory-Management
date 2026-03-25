@@ -99,15 +99,6 @@ CREATE TABLE orders (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE order_items (
-	id BIGSERIAL PRIMARY KEY,
-	order_id BIGINT NOT NULL REFERENCES orders(id) on DELETE CASCADE,
-	products_id BIGINT NOT NULL REFERENCES products(id),
-	quantity INTEGER NOT NULL CHECK (quantity > 0),
-	price_at_purchase NUMERIC(12,2) NOT NULL,
-	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -119,6 +110,15 @@ CREATE TABLE products (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+	id BIGSERIAL PRIMARY KEY,
+	order_id BIGINT NOT NULL REFERENCES orders(id) on DELETE CASCADE,
+	product_id BIGINT NOT NULL REFERENCES products(id),
+	quantity INTEGER NOT NULL CHECK (quantity > 0),
+	price_at_purchase NUMERIC(12,2) NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE inventory (
@@ -236,3 +236,52 @@ port 5432
   ]
 }
 
+// postgres cli
+
+docker run -d \
+  --name postgres-db \
+  -e POSTGRES_USER=saravanan \
+  -e POSTGRES_PASSWORD=admin \
+  -e POSTGRES_DB=postgres \
+  -p 5432:5432 \
+  -v postgres_data:/var/lib/postgresql \
+  postgres
+
+docker exec -it postgres-db psql -U saravanan -d postgres
+
+// docker exec -it 'docker-container-name' psql -U 'user' -d 'db-name'
+
+
+// For microservice
+
+create database inventory_db;
+create database order_db;
+
+docker exec -it postgres-db psql -U saravanan -d inventory_db // for (use inventory_db)
+
+// Inventory_db table creation
+
+CREATE TABLE inventory (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    warehouse_id BIGINT DEFAULT 1,
+    available_quantity INTEGER NOT NULL DEFAULT 0 CHECK (available_quantity >= 0),
+    reserved_quantity INTEGER NOT NULL DEFAULT 0 CHECK (reserved_quantity >= 0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (product_id, warehouse_id)
+);
+
+INSERT INTO inventory (
+    product_id,
+    warehouse_id,
+    available_quantity,
+    reserved_quantity
+)
+SELECT
+    gs.id AS product_id,
+    1 AS warehouse_id,
+    FLOOR(random() * 200)::int AS available_quantity,
+    FLOOR(random() * 50)::int AS reserved_quantity
+FROM generate_series(1, 100) AS gs(id);

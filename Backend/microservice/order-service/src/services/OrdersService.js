@@ -1,6 +1,5 @@
 const OrdersRepository = require('../repository/OrdersRepository');
-const { validateStockAvailability, updateInventoryForProductIds, getInventoryByProductIds } = require('./InventoryService');
-const pool = require('../db');
+const pool = require('../../db');
 
 const getOrders = async (page, limit) => {
     try { 
@@ -32,7 +31,7 @@ const createOrder = async (data) => {
         // create a map of order items for quick lookup
         const itemMap = new Map(items.map(i => [i.product_id, i]));
         // inventory check - fetch inventory for all products in the order and validate availability
-        const inventoryProducts = await getInventoryByProductIds(client, productIds);
+        // const inventoryProducts = await getInventoryByProductIds(client, productIds);
 
         // validate all products in the order exist in inventory
         if(inventoryProducts.length !== productIds.length) {
@@ -40,9 +39,9 @@ const createOrder = async (data) => {
         }
 
         // validate stock availability for each product in the order
-        if(!validateStockAvailability(inventoryProducts, itemMap)) {
-            throw new Error(`Insufficient stock for one or more products in the order`);
-        }
+        // if(!validateStockAvailability(inventoryProducts, itemMap)) {
+        //     throw new Error(`Insufficient stock for one or more products in the order`);
+        // }
 
         // create order
         const order = await OrdersRepository.createOrder(client,data);
