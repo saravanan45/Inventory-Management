@@ -39,7 +39,7 @@ const createOrder = async (req, res) => {
     }
 };
 
-const updateOrder = async (req, res) => {
+const updateOrderStatus = async (req, res) => {
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: "Order ID is required" });
     try {
@@ -66,7 +66,7 @@ const deleteOrder = async (req, res) => {
 module.exports = {
     getOrders,
     createOrder,
-    updateOrder,
+    updateOrderStatus,
     deleteOrder,
     getOrderById
 };

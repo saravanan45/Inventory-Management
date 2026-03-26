@@ -30,7 +30,7 @@ app.use(
 );
 
 app.use((req, res, next) => {
-    if (leakyBucket.allowRequest()) {
+    if (leakyBucket.addRequest(req)) {
         next();
     } else {
         res.status(429).json({ error: "Too Many Requests" });

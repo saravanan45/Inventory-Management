@@ -1,6 +1,7 @@
 const OrdersRepository = require('../repository/OrdersRepository');
 const pool = require('../../db');
 
+
 const getOrders = async (page, limit) => {
     try { 
         const orders = await OrdersRepository.getOrders(page, limit);
@@ -21,6 +22,48 @@ const getOrderById = async (id) => {
     }
 };
 
+const validateStockAvailability = async (inventoryProducts, itemMap) => {
+  let allStocksAvailable = true;
+  for (const item of inventoryProducts) {
+    const available_quantity = item.available_quantity - item.reserved_quantity;
+    const orderedItem = itemMap.get(item.product_id);
+    if (available_quantity < orderedItem.quantity) {
+      allStocksAvailable = false;
+    }
+  }
+  return allStocksAvailable;
+};
+
+
+const getInventoryByProductIds = async(productIds) => {
+    try {
+        const response = await fetch("http://localhost:3001/inventoryByProductIds", {
+            method: 'POST',
+            body: JSON.stringify({ ids: productIds }),
+            headers: { 'Content-Type': 'application/json' }
+        })
+        const result = await response.json();
+        console.log('Inventory products:', result.data, "productIds:", productIds);
+        return result.data;
+    } catch (error) {
+        console.error(error);
+        throw new Error('Error fetching inventory for product IDs');
+    }
+}
+
+const updateInventoryForProductIds = async (items) => {
+    try {
+        await fetch("http://localhost:3001/inventoryByProductIds/update", {
+            method: 'PUT',
+            body: JSON.stringify({ items }),
+            headers: { 'Content-Type': 'application/json' }
+        })
+    } catch (error) {
+        console.error(error);
+        throw new Error('Error updating inventory for product IDs');
+    }
+};
+
 const createOrder = async (data) => {
     const client = await pool.connect();
     try {
@@ -31,7 +74,7 @@ const createOrder = async (data) => {
         // create a map of order items for quick lookup
         const itemMap = new Map(items.map(i => [i.product_id, i]));
         // inventory check - fetch inventory for all products in the order and validate availability
-        // const inventoryProducts = await getInventoryByProductIds(client, productIds);
+        const inventoryProducts = await getInventoryByProductIds(productIds);
 
         // validate all products in the order exist in inventory
         if(inventoryProducts.length !== productIds.length) {
@@ -39,14 +82,14 @@ const createOrder = async (data) => {
         }
 
         // validate stock availability for each product in the order
-        // if(!validateStockAvailability(inventoryProducts, itemMap)) {
-        //     throw new Error(`Insufficient stock for one or more products in the order`);
-        // }
+        if(!validateStockAvailability(inventoryProducts, itemMap)) {
+            throw new Error(`Insufficient stock for one or more products in the order`);
+        }
 
         // create order
         const order = await OrdersRepository.createOrder(client,data);
         // update inventory - decrement reserved quantity for each product in the order
-        await updateInventoryForProductIds(client, items);
+        await updateInventoryForProductIds(items);
         // return created order
         await client.query('COMMIT');
         return order;
@@ -59,7 +102,7 @@ const createOrder = async (data) => {
     }
 };
 
-const updateOrder = async (data) => {
+const updateOrderStatus = async (data) => {
     try {
         const order = await OrdersRepository.updateOrder(data);
         return order;
@@ -82,7 +125,7 @@ const deleteOrder = async (id) => {
 module.exports = {
     getOrders,
     createOrder,
-    updateOrder,
+    updateOrderStatus,
     deleteOrder,
     getOrderById,
 };

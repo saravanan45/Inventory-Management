@@ -1,8 +1,8 @@
 const pool = require('../../db');
 
-const getInventoryByProductIds = async (client,productIds) => {
+const getInventoryByProductIds = async (productIds) => {
     try {
-        const result = await client.query("SELECT * FROM inventory WHERE product_id = ANY($1) FOR UPDATE", [productIds]);
+        const result = await pool.query("SELECT * FROM inventory WHERE product_id = ANY($1) FOR UPDATE", [productIds]);
         return result.rows;
     } catch (error) {
         console.error(error);
@@ -10,7 +10,7 @@ const getInventoryByProductIds = async (client,productIds) => {
     }
 };
 
-const updateInventoryForProductIds = (client, items) => {
+const updateInventoryForProductIds = async (items) => {
     const flatValues = items.flatMap(item => [item.product_id, item.quantity]);
     const valuePlaceholders = items.map((_, index) => `($${index * 2 + 1}::bigint, $${index * 2 + 2}::integer)`).join(', ');
 
@@ -21,7 +21,14 @@ const updateInventoryForProductIds = (client, items) => {
         WHERE i.product_id = c.product_id
     `;
 
-    return client.query(query, flatValues);
+    try {
+        const result = await pool.query(query, flatValues);
+        console.log('Inventory update result:', result);
+        return result;
+    } catch (error) {
+        console.error(error);
+        throw new Error('Error updating inventory');
+    }
 }
 
 module.exports = {

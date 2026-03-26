@@ -1,4 +1,4 @@
-const OrdersRepository = require("../repository/OrdersRepository");
+const OrdersRepository = require("../Repository/OrdersRepository");
 const {
   validateStockAvailability,
   updateInventoryForProductIds,
