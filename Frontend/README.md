@@ -285,3 +285,26 @@ SELECT
     FLOOR(random() * 200)::int AS available_quantity,
     FLOOR(random() * 50)::int AS reserved_quantity
 FROM generate_series(1, 100) AS gs(id);
+
+
+// inside service -> docker-compose up
+// inside service -> docker-compose down
+
+
+docker run -d \
+  --name inventory-db-1 \
+  -e POSTGRES_USER=saravanan \
+  -e POSTGRES_PASSWORD=admin \
+  -e POSTGRES_DB=inventory_db \
+  -p 5432:5432 \
+  -v inventory-service_postgres_data_new:/var/lib/postgresql/18 \
+  postgres
+
+docker run -d \     
+  --name order-db \
+  -e POSTGRES_USER=saravanan \
+  -e POSTGRES_PASSWORD=admin \
+  -e POSTGRES_DB=order_db \
+  -p 5433:5432 \
+  -v order-service_postgres_data_order:/var/lib/postgresql \
+  postgres

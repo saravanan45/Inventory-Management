@@ -1,10 +1,10 @@
 version: "3.9"
 
 services:
-  inventory-service:
+  order-service:
     build: .
     ports:
-      - "3001:3000"
+      - "3002:3000"
     depends_on:
       - db
     environment:
@@ -12,20 +12,20 @@ services:
       DB_PORT: 5432
       DB_USER: saravanan
       DB_PASSWORD: admin
-      DB_NAME: inventory_db
+      DB_NAME: order_db
 
   db:
     image: postgres:18
-    container_name: inventory-db-container
+    container_name: order-db-container
     environment:
       POSTGRES_USER: saravanan
       POSTGRES_PASSWORD: admin
-      POSTGRES_DB: inventory_db
+      POSTGRES_DB: order_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data_new:/var/lib/postgresql/18
-    
+      - order-service_postgres_data_order:/var/lib/postgresql
+
 volumes:
-  postgres_data_new:
-    name: inventory-service_postgres_data_new
+  postgres_data_order:
+    name: order-service_postgres_data_order
