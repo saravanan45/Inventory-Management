@@ -1,5 +1,5 @@
 const express = require("express");
-const LeakyBucket = require("../../Common/LeakyBucket");
+const LeakyBucket = require("./Common/LeakyBucket");
 const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
 const swaggerJSDoc = require("swagger-jsdoc");

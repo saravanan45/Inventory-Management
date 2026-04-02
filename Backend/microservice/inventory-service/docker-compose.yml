@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  inventory-service:
+    build: .
+    ports:
+      - "3001:3000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: saravanan
+      DB_PASSWORD: admin
+      DB_NAME: inventory_db
+
+  db:
+    image: postgres:18
+    container_name: inventory-db
+    environment:
+      POSTGRES_USER: saravanan
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_new:/var/lib/postgresql/18
+    
+volumes:
+  postgres_data_new: 

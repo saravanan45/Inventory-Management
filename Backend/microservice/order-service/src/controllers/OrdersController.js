@@ -1,5 +1,5 @@
 const OrdersService = require('../services/OrdersService');
-const response = require('../../../../Common/APIResponses');
+const response = require('../../Common/APIResponses');
 
 const getOrders = async (req, res) => {
     const {page = 0, limit = 10} = req.query || {};
