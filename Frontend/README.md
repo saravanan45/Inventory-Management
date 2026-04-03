@@ -290,17 +290,16 @@ FROM generate_series(1, 100) AS gs(id);
 // inside service -> docker-compose up
 // inside service -> docker-compose down
 
-
 docker run -d \
   --name inventory-db-1 \
   -e POSTGRES_USER=saravanan \
   -e POSTGRES_PASSWORD=admin \
   -e POSTGRES_DB=inventory_db \
   -p 5432:5432 \
-  -v inventory-service_postgres_data_new:/var/lib/postgresql/18 \
+  -v inventory-service_postgres_data_new:/var/lib/postgresql \
   postgres
 
-docker run -d \     
+docker run -d \
   --name order-db \
   -e POSTGRES_USER=saravanan \
   -e POSTGRES_PASSWORD=admin \
@@ -308,3 +307,28 @@ docker run -d \
   -p 5433:5432 \
   -v order-service_postgres_data_order:/var/lib/postgresql \
   postgres
+
+// microservice
+
+CREATE TABLE inventory (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    warehouse_id BIGINT DEFAULT 1,
+    available_quantity INTEGER NOT NULL DEFAULT 0 CHECK (available_quantity >= 0),
+    reserved_quantity INTEGER NOT NULL DEFAULT 0 CHECK (reserved_quantity >= 0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+)
+
+INSERT INTO inventory (
+    product_id,
+    warehouse_id,
+    available_quantity,
+    reserved_quantity
+)
+SELECT
+    gs AS product_id,
+    1 AS warehouse_id,
+    FLOOR(random() * 200)::int AS available_quantity,
+    FLOOR(random() * 50)::int AS reserved_quantity
+FROM generate_series(1, 100) AS gs;

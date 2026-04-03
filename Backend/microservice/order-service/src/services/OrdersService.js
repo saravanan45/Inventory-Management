@@ -1,5 +1,6 @@
 const OrdersRepository = require('../repository/OrdersRepository');
 const pool = require('../../db');
+const { inventoryHost, inventoryPort } = require('../../Common/constants');
 
 
 const getOrders = async (page, limit) => {
@@ -22,13 +23,15 @@ const getOrderById = async (id) => {
     }
 };
 
-const validateStockAvailability = async (inventoryProducts, itemMap) => {
+const validateStockAvailability = (inventoryProducts, itemMap) => {
   let allStocksAvailable = true;
   for (const item of inventoryProducts) {
     const available_quantity = item.available_quantity - item.reserved_quantity;
     const orderedItem = itemMap.get(item.product_id);
-    if (available_quantity < orderedItem.quantity) {
+
+    if (Number(available_quantity) < Number(orderedItem.quantity)) {
       allStocksAvailable = false;
+      console.log(`Insufficient stock for product ${item.product_id}`);
     }
   }
   return allStocksAvailable;
@@ -36,14 +39,16 @@ const validateStockAvailability = async (inventoryProducts, itemMap) => {
 
 
 const getInventoryByProductIds = async(productIds) => {
+    console.log("productIds", productIds);
     try {
-        const response = await fetch("http://localhost:3001/inventoryByProductIds", {
+        const response = await fetch(`http://${inventoryHost}:${inventoryPort}/inventoryByProductIds`, {
             method: 'POST',
             body: JSON.stringify({ ids: productIds }),
             headers: { 'Content-Type': 'application/json' }
         })
+
         const result = await response.json();
-        console.log('Inventory products:', result.data, "productIds:", productIds);
+        console.log("result", result);
         return result.data;
     } catch (error) {
         console.error(error);
@@ -53,7 +58,7 @@ const getInventoryByProductIds = async(productIds) => {
 
 const updateInventoryForProductIds = async (items) => {
     try {
-        await fetch("http://localhost:3001/inventoryByProductIds/update", {
+        await fetch(`http://${inventoryHost}:${inventoryPort}/inventoryByProductIds/update`, {
             method: 'PUT',
             body: JSON.stringify({ items }),
             headers: { 'Content-Type': 'application/json' }

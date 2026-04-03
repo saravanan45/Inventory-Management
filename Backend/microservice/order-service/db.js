@@ -5,7 +5,7 @@ const pool = new Pool({
   host: process.env.DB_HOST || "localhost",
   database: process.env.DB_NAME || "order_db",
   password: process.env.DB_PASSWORD || "admin",
-  port: Number(process.env.DB_PORT) || 5432,
+  port: Number(process.env.DB_PORT) || 5433,
 });
 
 pool.on("connect", () => {

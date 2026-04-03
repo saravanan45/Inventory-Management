@@ -1,11 +1,11 @@
 const { Pool } = require("pg");
 
 const pool = new Pool({
-  user: "saravanan",
-  host: "localhost",
-  database: "inventory_db",
-  password: "admin",
-  port: 5432,
+  user: process.env.DB_USER || "saravanan",
+  host: process.env.DB_HOST || "localhost",
+  database: process.env.DB_NAME || "inventory_db",
+  password: process.env.DB_PASSWORD || "admin",
+  port: Number(process.env.DB_PORT) || 5432,
 });
 
 pool.on("connect", () => {
