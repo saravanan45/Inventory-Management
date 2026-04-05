@@ -18,7 +18,7 @@ const getOrderById = async (req, res) => {
     try {
         const order = await OrdersService.getOrderById(id);
         if (!order) return res.status(404).json(response.error("Order not found"));
-        return res.status(200).json(response.success(order));
+        return res.status(201).json(response.success(order));
     } catch (err) {
         console.error(err);
         return res.status(500).json(response.error("Internal Server Error"));

@@ -30,15 +30,15 @@ const getOrderById = async (id) => {
   }
 };  
 
-const createOrder = async (client, data) => {
+const createOrder = async (data) => {
   try {
-    const order = await client.query(
+    const order = await pool.query(
       "INSERT INTO orders ( user_id, total_amount, currency, status, payment_status) VALUES ($1, $2, $3, $4, $5) RETURNING *",
       [
         data.user_id,
         data.total_amount,
         data.currency,
-        data.status,
+        "PENDING",
         data.payment_status,
       ],
     );
@@ -57,7 +57,7 @@ const createOrder = async (client, data) => {
         INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
         VALUES ${placeholders.join(", ")}
       `;
-      await client.query(insertItemsQuery, values);
+      await pool.query(insertItemsQuery, values);
     }
     return order.rows[0];
   } catch (error) {

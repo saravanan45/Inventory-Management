@@ -23,7 +23,6 @@ const updateInventoryForProductIds = async (items) => {
 
     try {
         const result = await pool.query(query, flatValues);
-        console.log('Inventory update result:', result);
         return result;
     } catch (error) {
         console.error(error);

@@ -1,12 +1,84 @@
-version: "3.9"
+networks:
+  kafka-net:
+    driver: bridge
 
 services:
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      # KRaft Identity
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      # Networking
+      # We use 'localhost' so your host machine apps can connect to it
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      
+      # KRaft Controller Settings
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      
+      # Storage (The IMPORTANT part)
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # You must provide a Cluster ID for KRaft
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - kafka-net
+      
+  init-kafka:
+    image: apache/kafka:4.1.1
+    depends_on:
+      - kafka
+    networks:
+      - kafka-net
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      echo 'Waiting for Kafka to be ready...'
+
+      # Wait until Kafka responds
+      until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list; do
+        echo 'Kafka not ready yet... retrying in 2s'
+        sleep 2
+      done
+
+      echo 'Kafka is ready. Creating topics...'
+
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic orders --partitions 1 --replication-factor 1
+
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic inventory --partitions 1 --replication-factor 1
+
+      echo 'Topics created:'
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+      "
+  
   inventory-service:
     build: ./inventory-service
     ports:
       - "3001:3001"
     depends_on:
-      - inventory-db
+      inventory-db:
+        condition: service_started
+      kafka:
+        condition: service_started
+      init-kafka:
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
     environment:
       DB_HOST: inventory-db
       DB_PORT: 5432
@@ -20,6 +92,10 @@ services:
       - "3002:3002"
     depends_on:
       - order-db
+      - kafka
+      - init-kafka
+    networks:
+      - kafka-net
     environment:
       DB_HOST: order-db
       DB_PORT: 5432
@@ -32,6 +108,9 @@ services:
   order-db:
     image: postgres:18
     container_name: order-db-container
+    networks:
+      - kafka-net
+
     environment:
       POSTGRES_USER: saravanan
       POSTGRES_PASSWORD: admin
@@ -44,6 +123,8 @@ services:
   inventory-db:
     image: postgres:18
     container_name: inventory-db-container
+    networks:
+      - kafka-net
     environment:
       POSTGRES_USER: saravanan
       POSTGRES_PASSWORD: admin
@@ -58,3 +139,4 @@ volumes:
     name: inventory-service_postgres_data_new
   postgres_data_order:
     name: order-service_postgres_data_order
+  kafka_data:
