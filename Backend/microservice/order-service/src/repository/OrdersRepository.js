@@ -68,11 +68,11 @@ const createOrder = async (data) => {
 
 const updateOrderStatus = async (data) => {
   try {
-    const order = pool.query(
+    const order = await pool.query(
       "UPDATE orders SET status = $1 WHERE id = $2 RETURNING *",
       [data.status, data.id],
     );
-    return order.rows[0];
+    return order.rows;
   } catch (error) {
     console.error(error);
     throw new Error("Error updating order");

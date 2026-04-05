@@ -2,18 +2,55 @@ const OrdersRepository = require("../repository/OrdersRepository");
 const kafka = require("../../kafka");
 
 const producer = kafka.producer();
+const consumer = kafka.consumer({ groupId: "order-service-group" });
 
 const connectProducer = async () => {
-  try {
-    await producer.connect();
-    console.log("Kafka producer connected");
-  } catch (error) {
-    console.error("Error connecting Kafka producer:", error);
-    await new Promise(res => setTimeout(res, 3000));
+  while (true) {
+    try {
+      await producer.connect();
+      console.log("Kafka producer connected");
+      break;
+    } catch (error) {
+      console.error(
+        "Error connecting Kafka producer, retrying in 3s:",
+        error.message,
+      );
+      await new Promise((res) => setTimeout(res, 3000));
+    }
   }
 };
 
+const connectConsumer = async () => {
+    try {
+      await consumer.connect();
+      console.log("Kafka consumer connected");
+      await consumer.subscribe({ topic: "inventory", fromBeginning: true });
+      await consumer.run({
+        eachMessage: async ({ topic, partition, message }) => {
+          try {
+            console.log("Received message:", message.value.toString());
+            const event = JSON.parse(message.value.toString());
+            if (event.type === "INVENTORY_UPDATED") {
+              console.log("Processing INVENTORY_UPDATED event:", event.data);
+              await updateOrderStatus({ id: event?.data?.id, status: "CONFIRMED" });
+            }
+            if(event.type === "INVENTORY_UPDATE_FAILED") {
+              console.log("Processing INVENTORY_UPDATE_FAILED event:", event.data);
+              await updateOrderStatus({ id: event?.data?.id, status: "FAILED" });
+            }
+          } catch (error) {
+            console.error("Error processing message:", error);
+          }
+        },
+      });
+    } catch (error) {
+      console.error("Error starting Kafka consumer:", error);
+      setTimeout(connectConsumer, 3000);
+    }
+};
+
 connectProducer();
+connectConsumer();
 
 const getOrders = async (page, limit) => {
   try {
@@ -48,7 +85,7 @@ const createOrder = async (data) => {
           key: order.id.toString(),
           value: JSON.stringify({
             type: "ORDER_CREATED",
-            data,
+            data: {...data, id: order.id },
             timestamp: new Date().toISOString(),
           }),
         },
@@ -64,7 +101,7 @@ const createOrder = async (data) => {
 
 const updateOrderStatus = async (data) => {
   try {
-    const order = await OrdersRepository.updateOrder(data);
+    const order = await OrdersRepository.updateOrderStatus(data);
     return order;
   } catch (error) {
     console.error(error);

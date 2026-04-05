@@ -2,14 +2,50 @@ const InventoryRepository = require("../repository/InventoryRepository");
 const kafka = require("../../kafka");
 
 const consumer = kafka.consumer({ groupId: "inventory-service-group" });
-consumer
-  .connect()
-  .then(() => {
-    console.log("Kafka consumer connected");
-  })
-  .catch((error) => {
-    console.error("Error connecting Kafka consumer:", error);
-  });
+const producer = kafka.producer();
+
+const connectConsumer = async () => {
+    try {
+      await consumer.connect();
+      console.log("Kafka consumer connected");
+      await consumer.subscribe({ topic: "orders", fromBeginning: true });
+      console.log("Starting Kafka consumer run for inventory-service");
+      await consumer.run({
+        eachMessage: async ({ topic, partition, message }) => {
+            console.log("Received message:", message.value.toString());
+            const event = JSON.parse(message.value.toString());
+            if (event.type === "ORDER_CREATED") {
+              await processOrderCreatedEvent(event, message.id);
+            }
+          }
+        });
+    } catch (error) {
+      console.error(
+        "Error connecting Kafka consumer, retrying in 3s:",
+        error.message,
+      );
+      setTimeout(connectConsumer, 3000);
+    }
+};
+
+const connectProducer = async () => {
+  while (true) {
+    try {
+      await producer.connect();
+      console.log("Kafka producer connected");
+      break;
+    } catch (error) {
+      console.error(
+        "Error connecting Kafka producer, retrying in 3s:",
+        error.message,
+      );
+      await new Promise((res) => setTimeout(res, 3000));
+    }
+  }
+};
+
+connectProducer();
+connectConsumer();
 
 const updateInventoryForProductIds = async (items) => {
   try {
@@ -40,6 +76,7 @@ const validateStockAvailability = (inventoryProducts, itemMap) => {
     const available_quantity = item.available_quantity - item.reserved_quantity;
     const orderedItem = itemMap.get(item.product_id);
 
+    console.log(`Available quantity for product ${item.product_id}: ${available_quantity}, Ordered quantity: ${orderedItem.quantity}`);
     if (Number(available_quantity) < Number(orderedItem.quantity)) {
       allStocksAvailable = false;
       console.log(`Insufficient stock for product ${item.product_id}`);
@@ -48,49 +85,54 @@ const validateStockAvailability = (inventoryProducts, itemMap) => {
   return allStocksAvailable;
 };
 
-const processOrderCreatedEvent = async (event) => {
+const processOrderCreatedEvent = async (event, id) => {
   try {
-    console.log("Processing ORDER_CREATED event:", event.data);
-    const productIds = event.data.items.map((item) => item.productId);
+    console.log("Processing ORDER_CREATED event:", event.data, "id:", event?.data?.id);
+    const productIds = event.data.items.map((item) => item.product_id);
     const inventoryProducts = await getInventoryByProductIds(productIds);
 
     const itemMap = new Map();
     for (const item of event.data.items) {
-      itemMap.set(item.productId, item);
+      itemMap.set(item.product_id, item);
     }
+    console.log("Inventory products:", inventoryProducts, "itemMap:", itemMap);
     if (validateStockAvailability(inventoryProducts, itemMap)) {
       await updateInventoryForProductIds(event.data.items);
+      await producer.send({
+        topic: "inventory",
+        messages: [
+          {
+            key: event?.data?.id.toString(),
+            value: JSON.stringify({
+              type: "INVENTORY_UPDATED",
+              data: {...event.data, id: event?.data?.id },
+              timestamp: new Date().toISOString(),
+            }),
+          },
+        ],
+      });
     } else {
       console.log(
         "Insufficient stock for one or more products. Cannot update inventory.",
       );
+      await producer.send({
+        topic: "inventory",
+        messages: [
+          {
+            key: event?.data?.id.toString(),
+            value: JSON.stringify({
+              type: "INVENTORY_UPDATE_FAILED",
+              data: {...event.data, id: event?.data?.id },
+              timestamp: new Date().toISOString(),
+            }),
+          },
+        ],
+      });
     }
   } catch (error) {
     console.error("Error processing ORDER_CREATED event:", error);
   }
 };
-
-const startConsumer = async () => {
-  await consumer.subscribe({ topic: "orders", fromBeginning: true });
-
-  console.log("Starting Kafka consumer run for inventory-service");
-  await consumer.run({
-    eachMessage: async ({ topic, partition, message }) => {
-      try {
-        console.log("Received message:", message.value.toString());
-        const event = JSON.parse(message.value.toString());
-        if (event.type === "ORDER_CREATED") {
-          await processOrderCreatedEvent(event);
-        }
-      } catch (error) {
-        console.log("Kafka not ready (group coordinator), retrying in 3s...");
-        await new Promise((res) => setTimeout(res, 3000));
-      }
-    },
-  });
-};
-
-startConsumer();
 
 // module.exports = {
 //   startConsumer,
