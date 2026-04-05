@@ -344,3 +344,6 @@ docker run -d \
   -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
   -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
   apache/kafka:latest
+
+
+docker-compose up --build --scale inventory-service=3

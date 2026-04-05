@@ -74,7 +74,7 @@ const validateStockAvailability = (inventoryProducts, itemMap) => {
   let allStocksAvailable = true;
   for (const item of inventoryProducts) {
     const available_quantity = item.available_quantity - item.reserved_quantity;
-    const orderedItem = itemMap.get(item.product_id);
+    const orderedItem = itemMap.get(Number(item.product_id));
 
     console.log(`Available quantity for product ${item.product_id}: ${available_quantity}, Ordered quantity: ${orderedItem.quantity}`);
     if (Number(available_quantity) < Number(orderedItem.quantity)) {
@@ -95,7 +95,9 @@ const processOrderCreatedEvent = async (event, id) => {
     for (const item of event.data.items) {
       itemMap.set(item.product_id, item);
     }
+
     console.log("Inventory products:", inventoryProducts, "itemMap:", itemMap);
+    
     if (validateStockAvailability(inventoryProducts, itemMap)) {
       await updateInventoryForProductIds(event.data.items);
       await producer.send({
