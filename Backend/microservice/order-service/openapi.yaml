@@ -227,6 +227,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /orders/bulk:
+    post:
+      summary: Creates bulk orders
+      tags:
+        - Orders
+      responses:
+        '201':
+          description: Bulk orders created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOrderCreateResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /order:
     post:
       summary: Creates a new order
@@ -544,6 +563,18 @@ components:
           type: boolean
         data:
           $ref: '#/components/schemas/Order'
+
+    BulkOrderCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Bulk orders created successfully
 
     ErrorResponse:
       type: object
