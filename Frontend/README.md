@@ -376,6 +376,16 @@ if (simulateCrash && !crashedOffsets.has(message.offset)) {
           ]);
 
 
+// For idempotency 
+
+add table
+
+CREATE TABLE processed_events (
+  event_id VARCHAR PRIMARY KEY,
+  processed_at TIMESTAMP DEFAULT NOW()
+);
+
+
 // Remaining to implement
 Idempotency
 Retry + DLQ
