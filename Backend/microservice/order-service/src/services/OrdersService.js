@@ -33,10 +33,12 @@ const connectConsumer = async () => {
             if (event.type === "INVENTORY_UPDATED") {
               console.log("Processing INVENTORY_UPDATED event:", event.data);
               await updateOrderStatus({ id: event?.data?.id, status: "CONFIRMED" });
+              console.log("Order status updated to CONFIRMED for order ID:", event?.data?.id);
             }
             if(event.type === "INVENTORY_UPDATE_FAILED") {
               console.log("Processing INVENTORY_UPDATE_FAILED event:", event.data);
               await updateOrderStatus({ id: event?.data?.id, status: "FAILED" });
+              console.log("Order status updated to FAILED for order ID:", event?.data?.id);
             }
           } catch (error) {
             console.error("Error processing message:", error);

@@ -347,3 +347,37 @@ docker run -d \
 
 
 docker-compose up --build --scale inventory-service=3
+
+
+// simulating atleast-once delivery for Kafka
+
+In inventory service add this
+
+// Set SIMULATE_AT_LEAST_ONCE_CRASH=true to crash after DB commit but before
+// offset commit. Kafka redelivers the same message; the idempotency check
+// in processOrderCreatedEvent skips re-processing on retry.
+const simulateCrash = true;
+const crashedOffsets = new Set();
+
+autoCommit: false, // add in the consumer.run
+
+if (simulateCrash && !crashedOffsets.has(message.offset)) {
+            crashedOffsets.add(message.offset);
+            console.log(
+              "[AT-LEAST-ONCE SIMULATION] Crashing before offset commit.",
+              "Kafka will redeliver offset:", message.offset,
+              "Idempotency check will skip re-processing on retry.",
+            );
+            throw new Error("Simulated crash before offset commit");
+          }
+
+          await consumer.commitOffsets([
+            { topic, partition, offset: (BigInt(message.offset) + 1n).toString() },
+          ]);
+
+
+// Remaining to implement
+Idempotency
+Retry + DLQ
+orchestrated saga
+Deployment

@@ -1,5 +1,6 @@
 const InventoryRepository = require("../repository/InventoryRepository");
 const kafka = require("../../kafka");
+const pool = require("../../db")
 
 const consumer = kafka.consumer({ groupId: "inventory-service-group" });
 const producer = kafka.producer();
@@ -47,11 +48,11 @@ const connectProducer = async () => {
 connectProducer();
 connectConsumer();
 
-const updateInventoryForProductIds = async (items) => {
+const updateInventoryForProductIds = async (items, client) => {
   try {
     // update inventory - increment reserved quantity for each product in the order
     const response =
-      await InventoryRepository.updateInventoryForProductIds(items);
+      await InventoryRepository.updateInventoryForProductIds(items, client);
     return response;
   } catch (error) {
     console.error(error);
@@ -59,10 +60,10 @@ const updateInventoryForProductIds = async (items) => {
   }
 };
 
-const getInventoryByProductIds = async (productIds) => {
+const getInventoryByProductIds = async (productIds, client) => {
   try {
     const inventoryProducts =
-      await InventoryRepository.getInventoryByProductIds(productIds);
+      await InventoryRepository.getInventoryByProductIds(productIds, client);
     return inventoryProducts;
   } catch (error) {
     console.error(error);
@@ -74,9 +75,11 @@ const validateStockAvailability = (inventoryProducts, itemMap) => {
   let allStocksAvailable = true;
   for (const item of inventoryProducts) {
     const available_quantity = item.available_quantity - item.reserved_quantity;
-    const orderedItem = itemMap.get(Number(item.product_id));
+    const orderedItem = itemMap.get(item.product_id);
 
-    console.log(`Available quantity for product ${item.product_id}: ${available_quantity}, Ordered quantity: ${orderedItem.quantity}`);
+    console.log(
+      `Available quantity for product ${item.product_id}: ${available_quantity}, Ordered quantity: ${orderedItem.quantity}`,
+    );
     if (Number(available_quantity) < Number(orderedItem.quantity)) {
       allStocksAvailable = false;
       console.log(`Insufficient stock for product ${item.product_id}`);
@@ -85,11 +88,45 @@ const validateStockAvailability = (inventoryProducts, itemMap) => {
   return allStocksAvailable;
 };
 
-const processOrderCreatedEvent = async (event, id) => {
+const checkOrderIsAlreadyProcessed = async (orderId, client) => {
   try {
-    console.log("Processing ORDER_CREATED event:", event.data, "id:", event?.data?.id);
+    const result =
+      await InventoryRepository.checkOrderIsAlreadyProcessed(orderId, client);
+    return result;
+  } catch (error) {
+    console.error("Error checking if order is already processed:", error);
+    throw new Error("Error checking order status");
+  }
+};
+
+const updateProcessedEvents = async (orderId, client) => {
+  try {
+    await InventoryRepository.updateProcessedEvents(orderId, client);
+  } catch (error) {
+    console.error("Error updating processed events:", error);
+    throw new Error("Error updating processed events");
+  }
+};
+
+const processOrderCreatedEvent = async (event) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    if (await checkOrderIsAlreadyProcessed(event?.data?.id, client)) {
+      console.log(`Order ${event?.data?.id} is already processed.`);
+      await client.query("ROLLBACK");
+      return;
+    }
+
+    console.log(
+      "Processing ORDER_CREATED event:",
+      event.data,
+      "id:",
+      event?.data?.id,
+    );
     const productIds = event.data.items.map((item) => item.product_id);
-    const inventoryProducts = await getInventoryByProductIds(productIds);
+    const inventoryProducts = await getInventoryByProductIds(productIds, client);
 
     const itemMap = new Map();
     for (const item of event.data.items) {
@@ -99,7 +136,7 @@ const processOrderCreatedEvent = async (event, id) => {
     console.log("Inventory products:", inventoryProducts, "itemMap:", itemMap);
     
     if (validateStockAvailability(inventoryProducts, itemMap)) {
-      await updateInventoryForProductIds(event.data.items);
+      await updateInventoryForProductIds(event.data.items, client);
       await producer.send({
         topic: "inventory",
         messages: [
@@ -107,7 +144,7 @@ const processOrderCreatedEvent = async (event, id) => {
             key: event?.data?.id.toString(),
             value: JSON.stringify({
               type: "INVENTORY_UPDATED",
-              data: {...event.data, id: event?.data?.id },
+              data: { ...event.data, id: event?.data?.id },
               timestamp: new Date().toISOString(),
             }),
           },
@@ -124,15 +161,21 @@ const processOrderCreatedEvent = async (event, id) => {
             key: event?.data?.id.toString(),
             value: JSON.stringify({
               type: "INVENTORY_UPDATE_FAILED",
-              data: {...event.data, id: event?.data?.id },
+              data: { ...event.data, id: event?.data?.id },
               timestamp: new Date().toISOString(),
             }),
           },
         ],
       });
     }
+    await updateProcessedEvents(event?.data?.id, client);
+    await client.query("COMMIT");
   } catch (error) {
     console.error("Error processing ORDER_CREATED event:", error);
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
 };
 

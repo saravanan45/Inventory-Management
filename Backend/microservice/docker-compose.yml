@@ -68,8 +68,12 @@ services:
   
   inventory-service:
     build: ./inventory-service
+    # comment ports when we are trying to scale up consumers
     # ports:
     #   - "3001:3001"
+    ports:
+      - "3001:3001"
+
     depends_on:
       inventory-db:
         condition: service_started
