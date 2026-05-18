@@ -94,14 +94,14 @@ docker run --name postgres-db \
   -e POSTGRES_USER=saravanan \
   -e POSTGRES_PASSWORD=admin \
   -e POSTGRES_DB=postgres \
-  -p 5433:5432 \
+  -p 5440:5432 \
   -v postgres-data:/var/lib/postgresql/data \
   -d postgres:17
 
 In tableplus
 
   Host: 127.0.0.1
-Port: 5433
+Port: 5440
 User: saravanan
 Password: admin
 Database: postgres
@@ -412,3 +412,7 @@ Idempotency
 Retry + DLQ
 orchestrated saga
 Deployment
+
+// chatbot
+
+for running chatbot, run ollama serve

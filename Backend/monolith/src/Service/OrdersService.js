@@ -17,8 +17,11 @@ const getOrders = async (page, limit) => {
 };
 
 const getOrderById = async (id) => {
+  if(!id) throw new Error("Order ID is required");
+  console.log("Fetching order by ID:", id);
   try {
     const order = await OrdersRepository.getOrderById(id);
+    console.log("Fetched order:", order);
     return order;
   } catch (error) {
     console.error(error);
@@ -101,6 +104,7 @@ const updateOrderStatus = async (data) => {
 };
 
 const deleteOrder = async (id) => {
+  if(!id) throw new Error("Order ID is required");
   try {
     const order = await OrdersRepository.deleteOrder(id);
     return order;

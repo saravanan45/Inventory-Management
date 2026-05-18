@@ -1,17 +1,17 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import ChatbotFooter from './components/ChatbotFooter'
-import Chatbot from './components/Chatbot'
+import { useState } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/vite.svg";
+import "./App.css";
+import ChatbotFooter from "./components/ChatbotFooter";
+import Chatbot from "./components/Chatbot";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
   const [showChatbot, setShowChatbot] = useState(false);
 
   const handleChatbotClick = () => {
-    console.log("Chatbot clicked!");
-  }
+    setShowChatbot((prev) => !prev);
+  };
 
   return (
     <>
@@ -35,14 +35,16 @@ function App() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
-      <div className="chatbot-footer-container" role="button" onClick={handleChatbotClick}>
+      <div
+        className="chatbot-footer-container"
+        role="button"
+        onClick={handleChatbotClick}
+      >
         <ChatbotFooter />
       </div>
-      {/* {showChatbot &&  */}
-      <Chatbot />
-      {/* } */}
+      {showChatbot && <Chatbot handleChatbotClose={handleChatbotClick} />}
     </>
-  )
+  );
 }
 
-export default App
+export default App;
