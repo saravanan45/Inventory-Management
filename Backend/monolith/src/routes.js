@@ -2,12 +2,15 @@ const express = require("express");
 const pool = require("./db.js");
 const ProductsController = require("./Controller/ProductsController");
 const OrdersController = require("./Controller/OrdersController");
+const ChatController = require("./Controller/ChatController");
 
 const router = express.Router();
 
 router.get("/", (req, res) => {
   res.send("Hello World!");
 });
+
+router.post("/chat", ChatController.handleChat);
 
 // Product routes
 router.get("/products", ProductsController.getProducts);

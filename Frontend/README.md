@@ -86,6 +86,27 @@ swagger URL: http://localhost:3010/api-docs/
 Backend URL: http://localhost:3010/
 
 
+// install docker colima
+
+colima start
+
+docker run --name postgres-db \
+  -e POSTGRES_USER=saravanan \
+  -e POSTGRES_PASSWORD=admin \
+  -e POSTGRES_DB=postgres \
+  -p 5433:5432 \
+  -v postgres-data:/var/lib/postgresql/data \
+  -d postgres:17
+
+In tableplus
+
+  Host: 127.0.0.1
+Port: 5433
+User: saravanan
+Password: admin
+Database: postgres
+
+
 Backend DB SQL Queries
 
 CREATE TABLE orders (
