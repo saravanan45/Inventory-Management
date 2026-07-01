@@ -1,4 +1,5 @@
 const { getOrderById } = require("./OrdersService");
+const { getRefundPolicy } = require("./refundService");
 
 const getChatReply = async (message, history) => {
   try {
@@ -21,15 +22,11 @@ const getChatReply = async (message, history) => {
         tools: [
           {
             type: "function",
-
             function: {
               name: "getOrderById",
-
               description: "Get details of an order using order id",
-
               parameters: {
                 type: "object",
-
                 properties: {
                   orderId: {
                     type: "string",
@@ -41,6 +38,23 @@ const getChatReply = async (message, history) => {
               },
             },
           },
+          {
+            type: "function",
+            function: {
+              name: "getRefundPolicy",
+              description: "search refund policy documentation and return relevant information",
+              parameters: {
+                type: "object",
+                properties: {
+                  query: {
+                    type: "string",
+                    description: "query string to search in refund policy documentation",
+                  }
+                },
+                required: ["query"],
+              }
+            }
+          }
         ],
       }),
     });
@@ -56,6 +70,11 @@ const getChatReply = async (message, history) => {
         const orderId = args.orderId;
         result = await getOrderById(orderId);
         console.log("Fetched order details for tool call:", result);
+      } else if (functionName === "getRefundPolicy") {
+        const query = args.query;
+        const refundPolicy = await getRefundPolicy(query);
+        result = { refundPolicy };
+        console.log("Fetched refund policy for tool call:", result);
       }
       messages.push(data.message);
       messages.push({
